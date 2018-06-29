@@ -16,7 +16,7 @@ npm install memoizer-ts --save
 ### Use the Memoizer
 The Memoizer can be used to add memoization to any function. It makes use of TypeScript's type system to return a strongly typed new function with the same signature as your original function.
 
-```
+```typescript
 import {Memoizer} from 'memoizer-ts';
 
 class MyClass {
@@ -30,7 +30,7 @@ class MyClass {
 ### Recursive example
 You can also define a recursive function that calls the memoized version of itself. This can be especially useful if the recursion leads to multiple calls to the function with the same set of parameters. This example calculates the n-th Fibonacci number, making use of memoization and thus avoiding repetitive calculations for the same n.
 
-```
+```typescript
 const nthFibonacci = Memoizer.makeMemoized(n =>
   n === 0 || n === 1 ? n :
   nthFibonacci(n-1) + nthFibonacci(n-2));
