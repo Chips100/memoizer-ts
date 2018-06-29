@@ -22,6 +22,16 @@ export class MemoizationLookup {
      * Collection that holds the memoized results for this storage.
      */
     private readonly memoizationEntryCollection: MemoizationEntryCollection = {};
+
+    /**
+     * EqualityComparers that should be use for comparing keys (in the respective order of keys).
+     */
+    private readonly equalityComparers: EqualityComparer[];
+
+    /**
+     * Function to use for adding new values, if not memoized before.
+     */
+    private readonly addSelector: (key:any[]) => any;
     
     /**
      * Value that has been memoized for the special case of no keys (zero-length).
@@ -29,20 +39,29 @@ export class MemoizationLookup {
     private noKeysValue = MemoizationLookup.NoValue;
 
     /**
+     * Creates a new, empty MemoizationLookup.
+     * @param equalityComparers EqualityComparers that should be use for comparing keys (in the respective order of keys).
+     * @param addSelector Function to use for adding new values, if not memoized before.
+     */
+    public constructor(equalityComparers: EqualityComparer[], addSelector: (key:any[]) => any) {
+        this.equalityComparers = equalityComparers;
+        this.addSelector = addSelector;
+    }
+
+    /**
      * Gets the memoized value for the specified keys; or runs the calculation if not yet memoized.
      * @param keys Keys of the value to get.
-     * @param equalityComparers EqualityComparers to compare individual keys.
      * @param addSelector Selector to run if the result has not yet been memoized.
      * @returns The memoized value; or the result of the calculation if not yet memoized.
      */
-    public getOrAdd(keys: any[], equalityComparers: EqualityComparer[], addSelector: (x: any[]) => any): any {
+    public getOrAdd(keys: any[]): any {
         // Handle case for no keys (zero-length).
         if (keys.length === 0) {
             // If noKeysValue has not been calculated before, do it now; otherwise just return it.
-            return this.noKeysValue !== MemoizationLookup.NoValue ? this.noKeysValue : this.noKeysValue = addSelector(keys);
+            return this.noKeysValue !== MemoizationLookup.NoValue ? this.noKeysValue : this.noKeysValue = this.addSelector(keys);
         }
 
-        return this.getOrAddInternal(this.memoizationEntryCollection, keys, equalityComparers, addSelector, 0);
+        return this.getOrAddInternal(this.memoizationEntryCollection, keys, 0);
     }
 
     /**
@@ -52,26 +71,24 @@ export class MemoizationLookup {
      * Missing entries for keys are created on the fly.
      * @param lookup Lookup for the current key.
      * @param keys Complete array of keys that is looked up.
-     * @param equalityComparers Complete array of EqualityComparers to use for comparing keys.
-     * @param addSelector Function to call to calculate the value if it needs to be added (not memoized yet).
      * @param index Current index that is processed in the array of keys.
      * @returns The memoized value; calculated by addSelector if it has not been memoized before.
      */
-    private getOrAddInternal(lookup: MemoizationEntryCollection, keys: any[], equalityComparers: EqualityComparer[], addSelector: (x: any[]) => any, index: number): any {
+    private getOrAddInternal(lookup: MemoizationEntryCollection, keys: any[], index: number): any {
         const key = keys[index],
-            equalityComparer = equalityComparers[index] || MemoizationLookup.DefaultEqualityComparer,
+            equalityComparer = this.equalityComparers[index] || MemoizationLookup.DefaultEqualityComparer,
             hashcode = equalityComparer.getHashCode(key),
             entries = this.getOrAddForHashCode(lookup, hashcode),
             entry = this.getOrAddByKey(entries, key, equalityComparer);
 
         // If more keys are present after the current key, search in the next hierarchy level.
         if (index + 1 < keys.length) {
-           return this.getOrAddInternal(entry.nextKeys, keys, equalityComparers, addSelector, index + 1); 
+           return this.getOrAddInternal(entry.nextKeys, keys, index + 1); 
         }
 
         // Otherwise this is the result we are interested in; calculate if not yet memoized.
         if (entry.result === MemoizationLookup.NoValue) {
-            entry.result = addSelector(keys);
+            entry.result = this.addSelector(keys);
         }
 
         return entry.result;
