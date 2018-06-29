@@ -5,7 +5,8 @@
   "scripts": {
     "drop-lib": "rimraf ./lib",
     "build": "npm run drop-lib & tsc --declaration",
-    "test": "jest"
+    "test": "jest",
+    "prepublish": "npm run build"
   },
   "files": ["lib"],
   "author": "Dennis Janiak",
