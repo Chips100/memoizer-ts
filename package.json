@@ -7,6 +7,7 @@
     "build": "npm run drop-lib & tsc --declaration",
     "test": "jest"
   },
+  "files": ["lib"],
   "author": "Dennis Janiak",
   "license": "MIT",
   "main": "./lib/main.js",
