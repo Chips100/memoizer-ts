@@ -1,17 +1,40 @@
 import { EqualityComparer } from "./EqualityComparer";
 
+/**
+ * Storage to hold calculation results for memoization.
+ */
 export class MemoizationLookup {
+    /**
+     * Internal marker to signalize missing values (not yet calculated and memoized).
+     */
     private static readonly NoValue = {};
     
+    /**
+     * Default Equality comparer - compares by strict equality and tries
+     * to convert the value into a number for use as the hashcode.
+     */
     private static readonly DefaultEqualityComparer: EqualityComparer = {
         getHashCode(input: any): number { return +input; },
         equals(a: any, b: any): boolean { return a === b; }
     };
 
+    /**
+     * Collection that holds the memoized results for this storage.
+     */
     private readonly memoizationEntryCollection: MemoizationEntryCollection = {};
     
-    private noKeysValue = MemoizationLookup.NoValue;;
+    /**
+     * Value that has been memoized for the special case of no keys (zero-length).
+     */
+    private noKeysValue = MemoizationLookup.NoValue;
 
+    /**
+     * Gets the memoized value for the specified keys; or runs the calculation if not yet memoized.
+     * @param keys Keys of the value to get.
+     * @param equalityComparers EqualityComparers to compare individual keys.
+     * @param addSelector Selector to run if the result has not yet been memoized.
+     * @returns The memoized value; or the result of the calculation if not yet memoized.
+     */
     public getOrAdd(keys: any[], equalityComparers: EqualityComparer[], addSelector: (x: any[]) => any): any {
         // Handle case for no keys (zero-length).
         if (keys.length === 0) {
@@ -22,6 +45,18 @@ export class MemoizationLookup {
         return this.getOrAddInternal(this.memoizationEntryCollection, keys, equalityComparers, addSelector, 0);
     }
 
+    /**
+     * Gets the memoized value by walking the hierarchy of stored keys
+     * recursively. For a single key, this means an ordinary dictionary lookup,
+     * for each additional key a nested lookup.
+     * Missing entries for keys are created on the fly.
+     * @param lookup Lookup for the current key.
+     * @param keys Complete array of keys that is looked up.
+     * @param equalityComparers Complete array of EqualityComparers to use for comparing keys.
+     * @param addSelector Function to call to calculate the value if it needs to be added (not memoized yet).
+     * @param index Current index that is processed in the array of keys.
+     * @returns The memoized value; calculated by addSelector if it has not been memoized before.
+     */
     private getOrAddInternal(lookup: MemoizationEntryCollection, keys: any[], equalityComparers: EqualityComparer[], addSelector: (x: any[]) => any, index: number): any {
         const key = keys[index],
             equalityComparer = equalityComparers[index] || MemoizationLookup.DefaultEqualityComparer,
@@ -29,10 +64,12 @@ export class MemoizationLookup {
             entries = this.getOrAddForHashCode(lookup, hashcode),
             entry = this.getOrAddByKey(entries, key, equalityComparer);
 
+        // If more keys are present after the current key, search in the next hierarchy level.
         if (index + 1 < keys.length) {
            return this.getOrAddInternal(entry.nextKeys, keys, equalityComparers, addSelector, index + 1); 
         }
 
+        // Otherwise this is the result we are interested in; calculate if not yet memoized.
         if (entry.result === MemoizationLookup.NoValue) {
             entry.result = addSelector(keys);
         }
@@ -40,6 +77,13 @@ export class MemoizationLookup {
         return entry.result;
     }
 
+    /**
+     * Gets the entries for the specified hashcode, 
+     * or creates the collection on the fly if not yet present.
+     * @param collection Collection with the entries for hash codes.
+     * @param hashcode The current hashcode.
+     * @returns The entries for the specified hashcode.
+     */
     private getOrAddForHashCode(collection: MemoizationEntryCollection, hashcode: number): MemoizationEntry[] {
         let entries = collection[hashcode];
         if (!entries) {
@@ -50,36 +94,60 @@ export class MemoizationLookup {
         return entries;
     }
 
+    /**
+     * Looks for the entry for the specified key in the array of entries.
+     * @param entries Entries that might contain the specified key.
+     * @param key Key that should be looked for.
+     * @param equalityComparer EqualityComparer to use for comparing keys.
+     * @returns The entry for the specified key; will be created on the fly if necessary.
+     */
     private getOrAddByKey(entries: MemoizationEntry[], key: any, equalityComparer: EqualityComparer) {
-        let entry = this.findEqualKey(entries, key, equalityComparer);
-        if (!entry) {
-            entry = {
-                key: key,
-                nextKeys: {},
-                result: MemoizationLookup.NoValue
-            }
-
-            entries.push(entry);
-        }
-
-        return entry;
-    }
-
-    private findEqualKey(entries: MemoizationEntry[], key: any, equalityComparer: EqualityComparer): MemoizationEntry {
         for (let entry of entries) {
             if (equalityComparer.equals(key, entry.key)) {
                 return entry;
             }
         }
+
+        // Not found; create empty entry.
+        const entry= {
+            key: key,
+            nextKeys: {},
+            result: MemoizationLookup.NoValue
+        };
+
+        entries.push(entry);
+        return entry;
     }
 }
 
+/**
+ * Represents a single memoized entry for a key.
+ */
 interface MemoizationEntry {
+    /**
+     * The key for which a result has been memoized.
+     */
     key: any;
+
+    /**
+     * Nested entries if more keys are specified after the current key.
+     */
     nextKeys: MemoizationEntryCollection;
+
+    /**
+     * The memoized result; or MemoizationLookup.NoValue if not yet memoized.
+     */
     result: any;
 }
 
+/**
+ * Represents a collection of memoized entries,
+ * stored in a dictionary-way under the hash code of the key of the entry.
+ */
 interface MemoizationEntryCollection {
+    /**
+     * Key = HashCode of the key in the entry
+     * Value = The entry.
+     */
     [hashcode: number]: MemoizationEntry[];
 }
