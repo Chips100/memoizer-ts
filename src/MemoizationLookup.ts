@@ -24,7 +24,7 @@ export class MemoizationLookup {
     private readonly memoizationEntryCollection: MemoizationEntryCollection = {};
 
     /**
-     * EqualityComparers that should be use for comparing keys (in the respective order of keys).
+     * EqualityComparers that should be usee for comparing keys (in the respective order of keys).
      */
     private readonly equalityComparers: EqualityComparer[];
 
@@ -40,7 +40,7 @@ export class MemoizationLookup {
 
     /**
      * Creates a new, empty MemoizationLookup.
-     * @param equalityComparers EqualityComparers that should be use for comparing keys (in the respective order of keys).
+     * @param equalityComparers EqualityComparers that should be useeW for comparing keys (in the respective order of keys).
      * @param addSelector Function to use for adding new values, if not memoized before.
      */
     public constructor(equalityComparers: EqualityComparer[], addSelector: (key:any[]) => any) {
