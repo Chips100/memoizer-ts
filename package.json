@@ -1,6 +1,6 @@
 {
   "name": "memoizer-ts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Allows adding memoization to arbitrary functions. The original function will only be called once for identical sets of arguments, subsequent calls will be returned with memoized results.",
   "homepage": "https://github.com/Chips100/memoizer-ts#readme",
   "bugs":{ 
